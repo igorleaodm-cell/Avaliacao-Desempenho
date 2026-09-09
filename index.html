@@ -388,12 +388,12 @@
    CONFIGURAÇÃO — preencha antes de publicar
    ========================================================================= */
 const CONFIG = {
-  MODO_DEMO: true,
+  MODO_DEMO: false,
   // URL do Web App do Google Apps Script (veja Code.gs / INSTRUCOES.md).
   // Um único endpoint recebe o PDF gerado no navegador e cuida de tudo do
   // lado do escritório: guarda o PDF no Drive, registra a linha na planilha
   // "Respostas" e envia o e-mail com o PDF anexado ao avaliador e ao avaliado.
-  APPS_SCRIPT_URL: "SUA_URL_DO_APPS_SCRIPT"
+  APPS_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbzWirHU2ryBLOp_s4lxecl2RPgcCaViThfmDzwtYflnlkxCIvDsnh1PpDmG4nSks35o0w/exec"
 };
 
 document.getElementById('demoFlag').style.display = CONFIG.MODO_DEMO ? 'block' : 'none';
