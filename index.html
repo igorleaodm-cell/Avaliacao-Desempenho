@@ -362,7 +362,7 @@
 
     <div class="actions">
       <button type="submit" class="submit" id="submitBtn">Gerar e enviar avaliação</button>
-      <p class="foot-note">Um PDF é gerado automaticamente e enviado ao avaliador e ao avaliado. O escritório recebe cópia de controle e a resposta é registrada na planilha.</p>
+      <p class="foot-note">Um PDF é gerado automaticamente e enviado ao avaliador e ao avaliado, com cópia salva no Drive e registrada na planilha do escritório.</p>
     </div>
   </form>
 
@@ -383,31 +383,25 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script>
 /* =========================================================================
    CONFIGURAÇÃO — preencha antes de publicar
    ========================================================================= */
 const CONFIG = {
   MODO_DEMO: true,
-  EMAILJS_PUBLIC_KEY: "SUA_PUBLIC_KEY",
-  EMAILJS_SERVICE_ID: "SEU_SERVICE_ID",
-  EMAILJS_TEMPLATE_ID: "SEU_TEMPLATE_ID",
-  EMAIL_CONTROLE: "avaliacoes@empresarialassessoria.com.br",
+  // URL do Web App do Google Apps Script (veja Code.gs / INSTRUCOES.md).
+  // Um único endpoint recebe o PDF gerado no navegador e cuida de tudo do
+  // lado do escritório: guarda o PDF no Drive, registra a linha na planilha
+  // "Respostas" e envia o e-mail com o PDF anexado ao avaliador e ao avaliado.
   APPS_SCRIPT_URL: "SUA_URL_DO_APPS_SCRIPT"
 };
 
-if (CONFIG.MODO_DEMO) {
-  document.getElementById('demoFlag').style.display = 'block';
-} else {
-  document.getElementById('demoFlag').style.display = 'none';
-  if (window.emailjs) emailjs.init({ publicKey: CONFIG.EMAILJS_PUBLIC_KEY });
-}
+document.getElementById('demoFlag').style.display = CONFIG.MODO_DEMO ? 'block' : 'none';
 
 /* =========================================================================
    OS 4 PILARES E SUAS PREMISSAS
    Editar aqui para adicionar/remover premissas — o restante do formulário
-   (validação, PDF, e-mail e planilha) se adapta automaticamente.
+   (validação, PDF e envio) se adapta automaticamente.
    ========================================================================= */
 const ICONES = {
   alvo: '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r=".8" fill="currentColor" stroke="none"/>',
@@ -709,36 +703,28 @@ function construirPDF(dados, protocolo){
   return { doc, nomeArquivo };
 }
 
-/* ---------- Envio por e-mail (EmailJS) ---------- */
-async function enviarEmail(dados, protocolo, pdfBase64){
-  if (CONFIG.MODO_DEMO) return { simulado: true };
-  const params = {
-    protocolo,
-    to_email: `${dados['E-mail do Avaliador']}, ${dados['E-mail do Avaliado']}`,
-    avaliado_nome: dados['Avaliado'],
-    avaliador_nome: dados['Avaliador'],
-    departamento: dados['Departamento'],
-    ciclo: dados['Ciclo'],
-    nota_final: `${dados['Nota final']} — ${ROTULOS[dados['Nota final']]}`,
-    pontos_fortes: dados['Pontos fortes'],
-    pontos_melhoria: dados['Pontos de melhoria'],
-    pdf_attachment: pdfBase64
-  };
-  return emailjs.send(CONFIG.EMAILJS_SERVICE_ID, CONFIG.EMAILJS_TEMPLATE_ID, params);
-}
-
-/* ---------- Registro na planilha de controle (Google Apps Script) ---------- */
-async function enviarParaPlanilha(dados, protocolo){
+/* ---------- Envio ao escritório (Google Apps Script) ----------
+   Um único endpoint recebe o PDF em base64 e cuida de tudo: salva o
+   arquivo no Drive, registra a linha na planilha "Respostas" e envia o
+   e-mail com o PDF anexado ao avaliador e ao avaliado. */
+async function enviarParaAppsScript(dados, protocolo, pdfBase64, nomeArquivo){
   if (CONFIG.MODO_DEMO) return { simulado: true };
   if (!CONFIG.APPS_SCRIPT_URL || CONFIG.APPS_SCRIPT_URL.indexOf('SUA_URL') !== -1) {
     throw new Error('APPS_SCRIPT_URL não configurada.');
   }
-  return fetch(CONFIG.APPS_SCRIPT_URL, {
+  const resposta = await fetch(CONFIG.APPS_SCRIPT_URL, {
     method: 'POST',
-    mode: 'no-cors',
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify({ 'Protocolo': protocolo, ...dados })
+    body: JSON.stringify({
+      'Protocolo': protocolo,
+      ...dados,
+      'PDF_Base64': pdfBase64,
+      'Nome_Arquivo': nomeArquivo
+    })
   });
+  const resultado = await resposta.json();
+  if (!resultado.ok) throw new Error(resultado.erro || 'Falha no envio.');
+  return resultado;
 }
 
 /* ---------- Submit ---------- */
@@ -759,37 +745,24 @@ form.addEventListener('submit', async (e) => {
   ultimoPDF = { doc, nomeArquivo };
   doc.save(nomeArquivo);
 
-  let emailFalhou = false;
-  let planilhaFalhou = false;
+  let envioFalhou = false;
 
   try {
-    submitBtn.textContent = 'Enviando e-mails…';
+    submitBtn.textContent = 'Enviando ao escritório…';
     const pdfBase64 = doc.output('datauristring').split(',')[1];
-    await enviarEmail(dados, protocolo, pdfBase64);
+    await enviarParaAppsScript(dados, protocolo, pdfBase64, nomeArquivo);
   } catch (err) {
-    console.error('Falha ao enviar e-mail:', err);
-    emailFalhou = true;
-  }
-
-  try {
-    submitBtn.textContent = 'Registrando na planilha…';
-    await enviarParaPlanilha(dados, protocolo);
-  } catch (err) {
-    console.error('Falha ao registrar na planilha:', err);
-    planilhaFalhou = true;
+    console.error('Falha no envio:', err);
+    envioFalhou = true;
   }
 
   let msg;
   if (CONFIG.MODO_DEMO) {
-    msg = 'Modo demonstração: o documento foi gerado e baixado, mas nenhum e-mail foi enviado e a planilha não foi atualizada.';
-  } else if (emailFalhou && planilhaFalhou) {
-    msg = 'O documento foi gerado e baixado, mas houve falha ao enviar o e-mail e ao registrar na planilha. Envie o PDF manualmente e avise o escritório.';
-  } else if (emailFalhou) {
-    msg = 'O documento foi gerado, baixado e registrado na planilha de controle. Porém houve falha ao enviar o e-mail — envie o PDF baixado manualmente ao avaliador e ao avaliado.';
-  } else if (planilhaFalhou) {
-    msg = 'O documento foi gerado e enviado por e-mail ao avaliador e ao avaliado, mas houve falha ao registrar na planilha de controle.';
+    msg = 'Modo demonstração: o documento foi gerado e baixado, mas nada foi enviado nem registrado.';
+  } else if (envioFalhou) {
+    msg = 'O documento foi gerado e baixado, mas houve falha no envio ao escritório. Envie o PDF baixado manualmente ao avaliador e ao avaliado, e avise o escritório.';
   } else {
-    msg = 'O documento foi gerado e enviado por e-mail ao avaliador e ao avaliado, e a resposta foi registrada na planilha de controle.';
+    msg = 'O documento foi gerado e enviado por e-mail ao avaliador e ao avaliado, com cópia salva no Drive e registrada na planilha do escritório.';
   }
   document.getElementById('successMsg').textContent = msg;
 
