@@ -719,8 +719,10 @@ function construirPDF(dados, protocolo){
     const larguraRotulo = doc.getTextWidth(rotuloTxt);
     doc.setFont('helvetica','normal');
     const linhasDesc = doc.splitTextToSize(item.descricao, larguraUtil - 16 - larguraRotulo);
-    const altura = Math.max(linhasDesc.length, 1) * 11.5 + 5;
-    checkPageBreak(altura);
+    const alturaLinhaTexto = 11.5;
+    const gapEntreItens = 6.5;
+    const alturaTexto = Math.max(linhasDesc.length, 1) * alturaLinhaTexto;
+    checkPageBreak(alturaTexto + gapEntreItens);
 
     doc.setFillColor(cor[0], cor[1], cor[2]);
     doc.circle(margin + 4, y - 3, 3.2, 'F');
@@ -731,10 +733,9 @@ function construirPDF(dados, protocolo){
     doc.setFont('helvetica','normal'); doc.setTextColor(75,80,102);
     doc.text(linhasDesc[0] || '', margin + 13 + larguraRotulo, y);
     for (let i = 1; i < linhasDesc.length; i++){
-      y += 11.5;
-      doc.text(linhasDesc[i], margin + 13, y);
+      doc.text(linhasDesc[i], margin + 13, y + i * alturaLinhaTexto);
     }
-    y += altura;
+    y += alturaTexto + gapEntreItens;
   });
   y += 10;
 
@@ -758,30 +759,39 @@ function construirPDF(dados, protocolo){
 
     pilar.premissas.forEach(nome => {
       const nota = dados[`${pilar.nome} — ${nome}`];
+      const larguraColunaNota = 128; // zona de largura fixa para o selo da nota, à direita
       doc.setFont('helvetica','bold'); doc.setFontSize(9.3);
-      const linhasNome = doc.splitTextToSize(nome, larguraUtil - 100);
-      const alturaLinha = Math.max(linhasNome.length, 1) * 12 + 10;
+      const linhasNome = doc.splitTextToSize(nome, larguraUtil - larguraColunaNota - 14);
+      const alturaLinhaTexto = 12;
+      const alturaLinha = Math.max(linhasNome.length, 1) * alturaLinhaTexto + 10;
       checkPageBreak(alturaLinha);
+
+      const centro = y - 12 + alturaLinha / 2; // centro vertical da linha, para alinhar tudo no meio
 
       doc.setFillColor(corSuave[0], corSuave[1], corSuave[2]);
       doc.roundedRect(margin, y - 12, larguraUtil, alturaLinha, 3, 3, 'F');
 
-      doc.setTextColor(40,44,64);
-      doc.text(linhasNome, margin + 10, y);
+      // Nome da premissa, centralizado verticalmente na linha
+      doc.setFont('helvetica','bold'); doc.setFontSize(9.3); doc.setTextColor(40,44,64);
+      const baseNome = centro - ((linhasNome.length - 1) * alturaLinhaTexto) / 2 + 3;
+      linhasNome.forEach((linha, i) => doc.text(linha, margin + 10, baseNome + i * alturaLinhaTexto));
 
+      // Selo da nota: posição fixa dentro da coluna (não desloca conforme o tamanho do rótulo),
+      // com o rótulo alinhado à esquerda logo depois do selo, e tudo centralizado verticalmente
       const corNota = CORES_NOTA[nota] || [107,112,137];
       const rotuloNota = ROTULOS[nota] || '—';
-      doc.setFont('helvetica','bold'); doc.setFontSize(8.5);
-      const larguraRotuloNota = doc.getTextWidth(rotuloNota);
       const larguraBadge = 17;
-      const xRotulo = pageWidth - margin - 10 - larguraRotuloNota;
-      const xBadge = xRotulo - 6 - larguraBadge;
+      const alturaBadge = 13;
+      const xBadge = pageWidth - margin - larguraColunaNota;
+      const yBadge = centro - alturaBadge / 2;
+
       doc.setFillColor(corNota[0], corNota[1], corNota[2]);
-      doc.roundedRect(xBadge, y - 10, larguraBadge, 13, 3, 3, 'F');
-      doc.setTextColor(255,255,255);
-      doc.text(nota ? String(nota) : '—', xBadge + larguraBadge/2, y - 0.5, { align: 'center' });
+      doc.roundedRect(xBadge, yBadge, larguraBadge, alturaBadge, 3, 3, 'F');
+      doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(255,255,255);
+      doc.text(nota ? String(nota) : '—', xBadge + larguraBadge / 2, centro + 3, { align: 'center' });
+
       doc.setTextColor(corNota[0], corNota[1], corNota[2]);
-      doc.text(rotuloNota, xRotulo, y);
+      doc.text(rotuloNota, xBadge + larguraBadge + 6, centro + 3);
 
       y += alturaLinha + 3;
     });
