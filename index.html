@@ -388,12 +388,12 @@
    CONFIGURAÇÃO — preencha antes de publicar
    ========================================================================= */
 const CONFIG = {
-  MODO_DEMO: false,
+  MODO_DEMO: true,
   // URL do Web App do Google Apps Script (veja Code.gs / INSTRUCOES.md).
   // Um único endpoint recebe o PDF gerado no navegador e cuida de tudo do
   // lado do escritório: guarda o PDF no Drive, registra a linha na planilha
   // "Respostas" e envia o e-mail com o PDF anexado ao avaliador e ao avaliado.
-  APPS_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbwhucztI8gJSfroIVribZVsRaXR4TBQtAFYQJTbDj04izkwNoQbYaly3qmLT5xBij__Pg/exec"
+  APPS_SCRIPT_URL: "SUA_URL_DO_APPS_SCRIPT"
 };
 
 document.getElementById('demoFlag').style.display = CONFIG.MODO_DEMO ? 'block' : 'none';
@@ -412,7 +412,7 @@ const ICONES = {
 
 const PILARES = [
   {
-    id: 'metas', numero: 3, nome: 'Metas e Resultados', accent: 'var(--p1)', icone: ICONES.alvo,
+    id: 'metas', numero: 3, nome: 'Metas e Resultados', accent: 'var(--p1)', rgb: [183,134,44], icone: ICONES.alvo,
     contexto: 'Avaliar se o colaborador atingiu as metas estabelecidas, entregou com qualidade e dentro dos prazos. Esse tópico mostra o impacto direto do trabalho no desempenho da equipe e da empresa, permitindo medir produtividade e confiabilidade.',
     premissas: [
       'Cumprimento dos prazos estabelecidos',
@@ -421,7 +421,7 @@ const PILARES = [
     ]
   },
   {
-    id: 'tecnicas', numero: 4, nome: 'Competências Técnicas', accent: 'var(--p2)', icone: ICONES.check,
+    id: 'tecnicas', numero: 4, nome: 'Competências Técnicas', accent: 'var(--p2)', rgb: [29,127,192], icone: ICONES.check,
     contexto: 'Verificar o domínio das habilidades e conhecimentos necessários para executar as atividades da função. Garante que o colaborador possui a base técnica para entregar resultados consistentes e acompanhar evoluções da área.',
     premissas: [
       'Conhecimento técnico',
@@ -430,7 +430,7 @@ const PILARES = [
     ]
   },
   {
-    id: 'comportamentais', numero: 5, nome: 'Competências Comportamentais', accent: 'var(--p3)', icone: ICONES.pessoas,
+    id: 'comportamentais', numero: 5, nome: 'Competências Comportamentais', accent: 'var(--p3)', rgb: [109,76,158], icone: ICONES.pessoas,
     contexto: 'Avaliar atitudes e comportamentos como comunicação, trabalho em equipe, proatividade e relacionamento interpessoal. Esses aspectos influenciam diretamente o clima organizacional, a colaboração entre equipes e a capacidade de gerar soluções em conjunto.',
     premissas: [
       'Trabalho em equipe',
@@ -440,7 +440,7 @@ const PILARES = [
     ]
   },
   {
-    id: 'desenvolvimento', numero: 6, nome: 'Desenvolvimento e Potencial', accent: 'var(--p4)', icone: ICONES.broto,
+    id: 'desenvolvimento', numero: 6, nome: 'Desenvolvimento e Potencial', accent: 'var(--p4)', rgb: [31,138,99], icone: ICONES.broto,
     contexto: 'Identificar a disposição do colaborador para aprender, adaptar-se a mudanças e assumir novos desafios. Esse tópico ajuda a planejar treinamentos, identificar talentos e preparar sucessores para posições estratégicas.',
     premissas: [
       'Interesse em aprender',
@@ -451,6 +451,34 @@ const PILARES = [
 ];
 
 const ROTULOS = {1:'Não aderente', 2:'Em desenvolvimento', 3:'Consistente', 4:'Forte desempenho', 5:'Excepcional'};
+
+/* Mesmas cores da escala usada na tela (--s1 a --s5), em RGB para o PDF */
+const CORES_NOTA = {
+  1: [179, 69, 58],
+  2: [201, 138, 62],
+  3: [62, 92, 138],
+  4: [29, 127, 192],
+  5: [31, 138, 99]
+};
+
+/* Texto do objetivo e das descrições da escala, reaproveitado no PDF */
+const OBJETIVO_TEXTO = [
+  'Este formulário tem como objetivo apoiar gestores e avaliadores na análise do desempenho dos colaboradores, oferecendo uma visão estruturada sobre resultados, competências técnicas, comportamentais e potencial de desenvolvimento.',
+  'A avaliação deve ser conduzida de forma justa, transparente e construtiva, servindo não apenas para medir performance, mas também para identificar oportunidades de crescimento e alinhar expectativas entre colaborador e empresa.'
+];
+const ESCALA_TEXTO = [
+  { nota: 1, descricao: 'Desempenho significativamente abaixo do esperado; metas não são atingidas e há impacto negativo no resultado.' },
+  { nota: 2, descricao: 'O colaborador demonstra esforço, mas ainda apresenta falhas frequentes; precisa de acompanhamento e treinamento.' },
+  { nota: 3, descricao: 'Cumpre as metas e prazos de forma consistente; desempenho estável e satisfatório.' },
+  { nota: 4, descricao: 'Supera expectativas em vários aspectos; entrega resultados de qualidade e contribui além do esperado.' },
+  { nota: 5, descricao: 'Desempenho muito acima da média; é modelo para os demais, gera impacto positivo e inovação.' }
+];
+
+/* Mistura uma cor com branco — usada para os fundos suaves das premissas */
+function corClara(rgb, forca){
+  return rgb.map(c => Math.round(c * forca + 255 * (1 - forca)));
+}
+
 
 function slug(texto){
   return texto.toLowerCase()
@@ -608,12 +636,32 @@ function construirPDF(dados, protocolo){
   const margin = 48;
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
+  const larguraUtil = pageWidth - margin * 2;
   let y = margin;
 
   function checkPageBreak(altura){
     if (y + altura > pageHeight - margin) { doc.addPage(); y = margin; }
   }
 
+  /* Parágrafo com quebra automática de linha e de página */
+  function paragrafo(texto, opts){
+    opts = opts || {};
+    const tamanho = opts.tamanho || 9.5;
+    const cor = opts.cor || [60,64,86];
+    const largura = opts.largura || larguraUtil;
+    const x = opts.x !== undefined ? opts.x : margin;
+    doc.setFont('helvetica', opts.negrito ? 'bold' : 'normal');
+    doc.setFontSize(tamanho);
+    doc.setTextColor(cor[0], cor[1], cor[2]);
+    const linhas = doc.splitTextToSize(texto || '—', largura);
+    const altura = linhas.length * (tamanho * 1.35);
+    checkPageBreak(altura);
+    doc.text(linhas, x, y);
+    y += altura;
+    return altura;
+  }
+
+  /* Cabeçalho */
   try { doc.addImage(LOGO_BASE64, 'PNG', margin, y, 120, 31); } catch(e) {}
   doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(107,112,137);
   doc.text(protocolo, pageWidth - margin, y + 12, { align: 'right' });
@@ -623,81 +671,168 @@ function construirPDF(dados, protocolo){
   doc.setDrawColor(226,229,240); doc.setLineWidth(1); doc.line(margin, y, pageWidth - margin, y);
   y += 26;
 
-  doc.setFont('helvetica','bold'); doc.setFontSize(17); doc.setTextColor(39,48,109);
+  doc.setFont('helvetica','bold'); doc.setFontSize(18); doc.setTextColor(39,48,109);
   doc.text('Avaliação de Desempenho', margin, y);
-  y += 26;
+  y += 22;
 
-  doc.setFontSize(10.5); doc.setTextColor(27,33,66);
-  const linhas1 = [
+  /* Dados gerais, num bloco com fundo suave */
+  const alturaBloco = 68;
+  checkPageBreak(alturaBloco);
+  doc.setFillColor(244,245,250);
+  doc.roundedRect(margin, y - 13, larguraUtil, alturaBloco, 5, 5, 'F');
+  let yBloco = y;
+  const linhasGerais = [
     ['Avaliado', `${dados['Avaliado']}  (${dados['E-mail do Avaliado']})`],
     ['Avaliador', `${dados['Avaliador']}  (${dados['E-mail do Avaliador']})`],
     ['Departamento', dados['Departamento']],
     ['Ciclo de avaliação', dados['Ciclo']]
   ];
-  linhas1.forEach(([label, valor]) => {
-    doc.setFont('helvetica','bold'); doc.text(label + ':', margin, y);
+  doc.setFontSize(10);
+  linhasGerais.forEach(([label, valor]) => {
+    doc.setFont('helvetica','bold'); doc.setTextColor(39,48,109);
+    doc.text(label + ':', margin + 12, yBloco);
+    doc.setFont('helvetica','normal'); doc.setTextColor(27,33,66);
+    const txt = doc.splitTextToSize(valor, larguraUtil - 154);
+    doc.text(txt, margin + 142, yBloco);
+    yBloco += 15.5 * txt.length;
+  });
+  y += alturaBloco + 16;
+
+  /* Objetivo e Critérios de Avaliação — para o avaliado entender o documento */
+  checkPageBreak(20);
+  doc.setFont('helvetica','bold'); doc.setFontSize(12.5); doc.setTextColor(39,48,109);
+  doc.text('Objetivo e Critérios de Avaliação', margin, y);
+  y += 16;
+  OBJETIVO_TEXTO.forEach(texto => { paragrafo(texto, { tamanho: 9, cor: [75,80,102] }); y += 4; });
+  y += 4;
+
+  /* Legenda da escala de 1 a 5, com a mesma cor usada nos badges das notas */
+  checkPageBreak(14);
+  doc.setFont('helvetica','bold'); doc.setFontSize(9.5); doc.setTextColor(39,48,109);
+  doc.text('Escala de avaliação', margin, y);
+  y += 14;
+
+  ESCALA_TEXTO.forEach(item => {
+    const cor = CORES_NOTA[item.nota];
+    const rotuloTxt = `${item.nota} — ${ROTULOS[item.nota]}: `;
+    doc.setFont('helvetica','bold'); doc.setFontSize(8.8);
+    const larguraRotulo = doc.getTextWidth(rotuloTxt);
     doc.setFont('helvetica','normal');
-    const txt = doc.splitTextToSize(valor, pageWidth - margin*2 - 130);
-    doc.text(txt, margin + 130, y);
-    y += 16 * txt.length;
+    const linhasDesc = doc.splitTextToSize(item.descricao, larguraUtil - 16 - larguraRotulo);
+    const altura = Math.max(linhasDesc.length, 1) * 11.5 + 5;
+    checkPageBreak(altura);
+
+    doc.setFillColor(cor[0], cor[1], cor[2]);
+    doc.circle(margin + 4, y - 3, 3.2, 'F');
+
+    doc.setFont('helvetica','bold'); doc.setFontSize(8.8); doc.setTextColor(cor[0], cor[1], cor[2]);
+    doc.text(rotuloTxt, margin + 13, y);
+
+    doc.setFont('helvetica','normal'); doc.setTextColor(75,80,102);
+    doc.text(linhasDesc[0] || '', margin + 13 + larguraRotulo, y);
+    for (let i = 1; i < linhasDesc.length; i++){
+      y += 11.5;
+      doc.text(linhasDesc[i], margin + 13, y);
+    }
+    y += altura;
   });
   y += 10;
 
+  /* Os 4 pilares, cada um com faixa colorida, contexto e premissas em destaque */
   PILARES.forEach((pilar, idx) => {
-    checkPageBreak(50);
-    doc.setDrawColor(226,229,240); doc.line(margin, y, pageWidth - margin, y);
-    y += 18;
-    doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(39,48,109);
-    doc.text(`${idx+1}. ${pilar.nome}`, margin, y);
-    y += 18;
+    const corPilar = pilar.rgb;
+    const corSuave = corClara(corPilar, 0.10);
+
+    checkPageBreak(30);
+    doc.setFillColor(corPilar[0], corPilar[1], corPilar[2]);
+    doc.roundedRect(margin, y - 15, larguraUtil, 24, 4, 4, 'F');
+    doc.setFont('helvetica','bold'); doc.setFontSize(11.5); doc.setTextColor(255,255,255);
+    doc.text(`${idx+1}. ${pilar.nome}`, margin + 12, y);
+    y += 20;
+
+    doc.setFont('helvetica','italic'); doc.setFontSize(8.8); doc.setTextColor(90,95,120);
+    const linhasContexto = doc.splitTextToSize(pilar.contexto, larguraUtil - 8);
+    checkPageBreak(linhasContexto.length * 11.5 + 6);
+    doc.text(linhasContexto, margin + 4, y);
+    y += linhasContexto.length * 11.5 + 12;
 
     pilar.premissas.forEach(nome => {
-      checkPageBreak(16);
       const nota = dados[`${pilar.nome} — ${nome}`];
-      doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(60,64,86);
-      doc.text(nome, margin + 4, y);
-      doc.setFont('helvetica','bold'); doc.setTextColor(29,127,192);
-      doc.text(`${nota} — ${ROTULOS[nota] || ''}`, pageWidth - margin, y, { align: 'right' });
-      y += 15;
+      doc.setFont('helvetica','bold'); doc.setFontSize(9.3);
+      const linhasNome = doc.splitTextToSize(nome, larguraUtil - 100);
+      const alturaLinha = Math.max(linhasNome.length, 1) * 12 + 10;
+      checkPageBreak(alturaLinha);
+
+      doc.setFillColor(corSuave[0], corSuave[1], corSuave[2]);
+      doc.roundedRect(margin, y - 12, larguraUtil, alturaLinha, 3, 3, 'F');
+
+      doc.setTextColor(40,44,64);
+      doc.text(linhasNome, margin + 10, y);
+
+      const corNota = CORES_NOTA[nota] || [107,112,137];
+      const rotuloNota = ROTULOS[nota] || '—';
+      doc.setFont('helvetica','bold'); doc.setFontSize(8.5);
+      const larguraRotuloNota = doc.getTextWidth(rotuloNota);
+      const larguraBadge = 17;
+      const xRotulo = pageWidth - margin - 10 - larguraRotuloNota;
+      const xBadge = xRotulo - 6 - larguraBadge;
+      doc.setFillColor(corNota[0], corNota[1], corNota[2]);
+      doc.roundedRect(xBadge, y - 10, larguraBadge, 13, 3, 3, 'F');
+      doc.setTextColor(255,255,255);
+      doc.text(nota ? String(nota) : '—', xBadge + larguraBadge/2, y - 0.5, { align: 'center' });
+      doc.setTextColor(corNota[0], corNota[1], corNota[2]);
+      doc.text(rotuloNota, xRotulo, y);
+
+      y += alturaLinha + 3;
     });
 
     y += 4;
-    doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(60,64,86);
-    const corpo = dados[`${pilar.nome} — Análise qualitativa`] || '—';
-    const linhas = doc.splitTextToSize(corpo, pageWidth - margin*2);
-    checkPageBreak(linhas.length * 13 + 10);
-    doc.text(linhas, margin, y);
-    y += linhas.length * 13 + 16;
+    const corpo = dados[`${pilar.nome} — Análise qualitativa`];
+    if (corpo && corpo.trim() !== ''){
+      checkPageBreak(12);
+      doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(corPilar[0], corPilar[1], corPilar[2]);
+      doc.text('Análise qualitativa', margin, y);
+      y += 12;
+      paragrafo(corpo, { tamanho: 9, cor: [60,64,86] });
+    }
+    y += 16;
   });
 
-  checkPageBreak(90);
+  /* Conclusão */
+  checkPageBreak(24);
   doc.setDrawColor(226,229,240); doc.line(margin, y, pageWidth - margin, y);
   y += 18;
-  doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(39,48,109);
+  doc.setFont('helvetica','bold'); doc.setFontSize(13); doc.setTextColor(39,48,109);
   doc.text('Conclusão', margin, y);
   y += 18;
 
-  doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(27,33,66);
-  doc.text('Pontos fortes identificados', margin, y); y += 14;
-  doc.setFont('helvetica','normal'); doc.setTextColor(60,64,86);
-  let l = doc.splitTextToSize(dados['Pontos fortes'], pageWidth - margin*2);
-  checkPageBreak(l.length*13+20);
-  doc.text(l, margin, y); y += l.length*13 + 14;
+  checkPageBreak(12);
+  doc.setFont('helvetica','bold'); doc.setFontSize(9.5); doc.setTextColor(27,33,66);
+  doc.text('Pontos fortes identificados', margin, y); y += 13;
+  paragrafo(dados['Pontos fortes'], { tamanho: 9.3 });
+  y += 12;
 
-  doc.setFont('helvetica','bold'); doc.setTextColor(27,33,66);
-  doc.text('Pontos de melhoria e recomendações', margin, y); y += 14;
-  doc.setFont('helvetica','normal'); doc.setTextColor(60,64,86);
-  l = doc.splitTextToSize(dados['Pontos de melhoria'], pageWidth - margin*2);
-  checkPageBreak(l.length*13+20);
-  doc.text(l, margin, y); y += l.length*13 + 18;
+  checkPageBreak(12);
+  doc.setFont('helvetica','bold'); doc.setFontSize(9.5); doc.setTextColor(27,33,66);
+  doc.text('Pontos de melhoria e recomendações', margin, y); y += 13;
+  paragrafo(dados['Pontos de melhoria'], { tamanho: 9.3 });
+  y += 16;
 
-  checkPageBreak(30);
-  doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(39,48,109);
-  doc.text(`Nota de avaliação final: ${dados['Nota final']} — ${ROTULOS[dados['Nota final']]}`, margin, y);
-  y += 34;
+  /* Nota final, em faixa colorida de destaque */
+  const notaFinalCor = CORES_NOTA[dados['Nota final']] || [39,48,109];
+  const alturaFaixa = 30;
+  checkPageBreak(alturaFaixa + 6);
+  doc.setFillColor(notaFinalCor[0], notaFinalCor[1], notaFinalCor[2]);
+  doc.roundedRect(margin, y - 20, larguraUtil, alturaFaixa, 5, 5, 'F');
+  doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(255,255,255);
+  doc.text('Nota de avaliação final', margin + 14, y - 1);
+  doc.setFontSize(13);
+  doc.text(`${dados['Nota final']} — ${ROTULOS[dados['Nota final']]}`, pageWidth - margin - 14, y - 1, { align: 'right' });
+  y += alturaFaixa + 12;
 
-  doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(107,112,137);
-  doc.text(`Documento gerado eletronicamente pelo formulário de avaliação de desempenho — Empresarial Assessoria Contábil. Protocolo ${protocolo}.`, margin, y, { maxWidth: pageWidth - margin*2 });
+  checkPageBreak(12);
+  doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(140,144,163);
+  doc.text(`Documento gerado eletronicamente pelo formulário de avaliação de desempenho — Empresarial Assessoria Contábil. Protocolo ${protocolo}.`, margin, y, { maxWidth: larguraUtil });
 
   const nomeArquivo = `Avaliacao_${dados['Avaliado'].replace(/\s+/g,'_')}_${dados['Ciclo'].replace(/[^\w]+/g,'_')}.pdf`;
   return { doc, nomeArquivo };
