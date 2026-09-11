@@ -349,7 +349,7 @@
             <option>Diretor</option>
             <option>Sócio</option>
           </select>
-          <div class="hint">Selecionando "Gestor" ou "Gerente", um pilar adicional de Liderança é incluído na avaliação.</div>
+          <div class="hint">Selecionando um cargo de gestão (Supervisor, Coordenador, Gestor, Gerente, Diretor ou Sócio), um pilar adicional de Liderança é incluído na avaliação.</div>
         </div>
       </div>
     </section>
@@ -441,7 +441,7 @@ const ICONES = {
 };
 
 /* Cargos que exigem o pilar adicional de Liderança */
-const CARGOS_LIDERANCA = ['Gestor', 'Gerente'];
+const CARGOS_LIDERANCA = ['Supervisor', 'Coordenador', 'Gestor', 'Gerente', 'Diretor', 'Sócio'];
 function cargoExigeLideranca(cargo){ return CARGOS_LIDERANCA.indexOf(cargo) !== -1; }
 function pilarAtivo(pilar){
   return !pilar.condicional || cargoExigeLideranca(document.getElementById('cargo').value);
@@ -880,19 +880,23 @@ function construirPDF(dados, protocolo){
       doc.setFillColor(corSuave[0], corSuave[1], corSuave[2]);
       doc.roundedRect(margin, topo, larguraUtil, alturaLinha, 3, 3, 'F');
 
-      // Nome da premissa e, quando houver, as perguntas de apoio — bloco centralizado na linha
-      let cursorY = centro - alturaBlocoTexto / 2 + 3;
+      // Nome da premissa e, quando houver, as perguntas de apoio — bloco centralizado na linha.
+      // Cada linha usa seu próprio deslocamento de linha de base (~0,72 do tamanho da fonte),
+      // para o título e as perguntas ficarem visualmente centralizados no meio da caixa.
+      const topoBloco = centro - alturaBlocoTexto / 2;
       doc.setFont('helvetica','bold'); doc.setFontSize(9.3); doc.setTextColor(40,44,64);
-      linhasNome.forEach((linha, i) => doc.text(linha, margin + 10, cursorY + i * alturaLinhaNome));
-      cursorY += alturaNomeBloco;
+      linhasNome.forEach((linha, i) => {
+        const topoLinha = topoBloco + i * alturaLinhaNome;
+        doc.text(linha, margin + 10, topoLinha + 9.3 * 0.72);
+      });
 
       if (linhasAjuda.length){
-        cursorY += 4;
+        let topoAjuda = topoBloco + alturaNomeBloco + 4;
         doc.setFont('helvetica','italic'); doc.setFontSize(7.8); doc.setTextColor(110,114,133);
         linhasAjuda.forEach(itemLinhas => {
           itemLinhas.forEach(linha => {
-            doc.text(linha, margin + 12, cursorY);
-            cursorY += alturaLinhaAjuda;
+            doc.text(linha, margin + 12, topoAjuda + 7.8 * 0.72);
+            topoAjuda += alturaLinhaAjuda;
           });
         });
       }
