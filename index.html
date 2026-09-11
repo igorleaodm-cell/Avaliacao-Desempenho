@@ -452,36 +452,36 @@ const PILARES = [
     id: 'metas', nome: 'Metas e Resultados', accent: 'var(--p1)', rgb: [183,134,44], icone: ICONES.alvo,
     contexto: 'Avaliar se o colaborador atingiu as metas estabelecidas, entregou com qualidade e dentro dos prazos. Esse tópico mostra o impacto direto do trabalho no desempenho da equipe e da empresa, permitindo medir produtividade e confiabilidade.',
     premissas: [
-      { nome: 'Cumprimento dos prazos estabelecidos', ajuda: [] },
-      { nome: 'Qualidade das entregas', ajuda: [] },
-      { nome: 'Produtividade geral', ajuda: [] }
+      { nome: 'Cumprimento dos prazos estabelecidos', ajuda: ['As entregas combinadas foram feitas dentro do prazo definido? Quando houve atraso, o colaborador comunicou com antecedência e buscou alternativas?'] },
+      { nome: 'Qualidade das entregas', ajuda: ['As entregas atendem aos padrões esperados, com poucos erros ou retrabalho? O colaborador revisa o próprio trabalho antes de entregar?'] },
+      { nome: 'Produtividade geral', ajuda: ['O volume de trabalho entregue é compatível com o esperado para a função? O colaborador consegue equilibrar volume e qualidade nas entregas?'] }
     ]
   },
   {
     id: 'tecnicas', nome: 'Competências Técnicas', accent: 'var(--p2)', rgb: [29,127,192], icone: ICONES.check,
     contexto: 'Verificar o domínio das habilidades e conhecimentos necessários para executar as atividades da função. Garante que o colaborador possui a base técnica para entregar resultados consistentes e acompanhar evoluções da área.',
     premissas: [
-      { nome: 'Conhecimento técnico', ajuda: [] },
-      { nome: 'Capacidade de resolver problemas', ajuda: [] },
-      { nome: 'Inovação e melhoria contínua', ajuda: [] }
+      { nome: 'Conhecimento técnico', ajuda: ['O colaborador domina as ferramentas, sistemas e conceitos necessários para a função? Busca se atualizar quando percebe uma lacuna de conhecimento?'] },
+      { nome: 'Capacidade de resolver problemas', ajuda: ['Diante de um problema ou imprevisto, o colaborador consegue identificar a causa e propor soluções sem depender de validação constante?'] },
+      { nome: 'Inovação e melhoria contínua', ajuda: ['O colaborador sugere melhorias nos processos existentes? Está aberto a testar novas formas de fazer o trabalho?'] }
     ]
   },
   {
     id: 'comportamentais', nome: 'Competências Comportamentais', accent: 'var(--p3)', rgb: [109,76,158], icone: ICONES.pessoas,
     contexto: 'Avaliar atitudes e comportamentos como comunicação, trabalho em equipe, proatividade e relacionamento interpessoal. Esses aspectos influenciam diretamente o clima organizacional, a colaboração entre equipes e a capacidade de gerar soluções em conjunto.',
     premissas: [
-      { nome: 'Trabalho em equipe', ajuda: [] },
-      { nome: 'Comunicação', ajuda: [] },
-      { nome: 'Proatividade', ajuda: [] },
-      { nome: 'Relacionamento interpessoal', ajuda: [] }
+      { nome: 'Trabalho em equipe', ajuda: ['O colaborador colabora com os colegas, compartilha informações e ajuda quando necessário? Contribui para um ambiente de equipe saudável?'] },
+      { nome: 'Comunicação', ajuda: ['O colaborador se expressa com clareza, tanto de forma escrita quanto verbal? Ouve e considera a opinião dos outros?'] },
+      { nome: 'Proatividade', ajuda: ['O colaborador antecipa necessidades e age sem esperar ser cobrado? Assume tarefas além do que foi formalmente atribuído quando necessário?'] },
+      { nome: 'Relacionamento interpessoal', ajuda: ['O colaborador mantém relações respeitosas e profissionais com colegas, líderes e clientes? Lida bem com divergências?'] }
     ]
   },
   {
     id: 'desenvolvimento', nome: 'Desenvolvimento e Potencial', accent: 'var(--p4)', rgb: [31,138,99], icone: ICONES.broto,
     contexto: 'Identificar a disposição do colaborador para aprender, adaptar-se a mudanças e assumir novos desafios. Esse tópico ajuda a planejar treinamentos, identificar talentos e preparar sucessores para posições estratégicas.',
     premissas: [
-      { nome: 'Interesse em aprender', ajuda: [] },
-      { nome: 'Adaptação a mudanças', ajuda: [] }
+      { nome: 'Interesse em aprender', ajuda: ['O colaborador busca aprender coisas novas relacionadas à sua função ou à empresa? Demonstra curiosidade diante de temas fora da sua rotina?'] },
+      { nome: 'Adaptação a mudanças', ajuda: ['O colaborador se ajusta bem a mudanças de prioridade, processo ou contexto? Mantém a produtividade mesmo diante de imprevistos?'] }
     ]
   },
   {
@@ -489,29 +489,19 @@ const PILARES = [
     contexto: 'Este pilar avalia a capacidade do colaborador de influenciar positivamente pessoas e resultados, independentemente de ocupar uma posição formal de gestão. Liderança é entendida como a habilidade de inspirar, orientar e mobilizar colegas e equipes em direção aos objetivos organizacionais, promovendo um ambiente de confiança, colaboração e desenvolvimento contínuo.',
     premissas: [
       { nome: 'Visão e Direcionamento', ajuda: [
-        'Clareza na comunicação de objetivos e prioridades.',
-        'Capacidade de alinhar esforços individuais e coletivos à estratégia da organização.',
-        'Inspiração para que outros se engajem e se sintam parte do propósito.'
+        'O colaborador comunica objetivos e prioridades com clareza, alinhando esforços individuais e coletivos à estratégia da organização? Inspira outras pessoas a se engajarem e se sentirem parte do propósito?'
       ]},
       { nome: 'Influência e Inspiração', ajuda: [
-        'Habilidade de motivar colegas e equipes, mesmo em cenários desafiadores.',
-        'Postura que gera credibilidade e respeito.',
-        'Capacidade de ser exemplo em atitudes e comportamentos.'
+        'O colaborador consegue motivar colegas e equipes mesmo em cenários desafiadores? Sua postura gera credibilidade e respeito, servindo de exemplo em atitudes e comportamentos?'
       ]},
       { nome: 'Desenvolvimento de Pessoas', ajuda: [
-        'Incentivo ao crescimento profissional dos colegas.',
-        'Apoio na construção de competências e autonomia.',
-        'Feedbacks construtivos e orientados ao desenvolvimento.'
+        'O colaborador incentiva o crescimento profissional dos colegas, apoiando a construção de competências e autonomia? Oferece feedbacks construtivos, voltados ao desenvolvimento?'
       ]},
       { nome: 'Gestão de Relacionamentos', ajuda: [
-        'Construção de relações de confiança e colaboração.',
-        'Respeito à diversidade de opiniões e estilos.',
-        'Capacidade de mediar conflitos e promover soluções equilibradas.'
+        'O colaborador constrói relações de confiança e colaboração, respeitando a diversidade de opiniões e estilos? Consegue mediar conflitos e promover soluções equilibradas?'
       ]},
       { nome: 'Tomada de Decisão e Responsabilidade', ajuda: [
-        'Capacidade de assumir responsabilidades e decisões com segurança.',
-        'Postura ética e transparente.',
-        'Resiliência diante de erros, transformando-os em aprendizado.'
+        'O colaborador assume responsabilidades e decisões com segurança, mantendo postura ética e transparente? Lida bem com erros, transformando-os em aprendizado?'
       ]}
     ]
   }
