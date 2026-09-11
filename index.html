@@ -114,6 +114,7 @@
     box-shadow: 0 1px 2px rgba(27,33,66,.03);
   }
   section.card.pilar{ border-top: 4px solid var(--accent, var(--navy)); }
+  section.card.pilar-oculto{ display:none; }
   .seq{ display:flex; align-items:flex-start; gap:16px; margin-bottom:20px; }
   .seq .num{
     flex: none; width: 32px; height: 32px; border-radius: 50%;
@@ -162,6 +163,9 @@
   .premissa-nome{ font-size: 14px; font-weight: 600; color: var(--navy-ink); }
   .premissa-nome .req{ color: var(--s1); margin-left:2px; }
   .premissa-nivel{ font-size: 12.5px; font-weight:600; color: var(--muted); min-height:16px; }
+  .premissa-ajuda{ margin: -3px 0 10px; font-size: 12px; color: var(--muted); line-height:1.5; }
+  .premissa-ajuda ul{ margin:2px 0 0; padding-left:16px; }
+  .premissa-ajuda li{ margin-bottom:1px; }
 
   .scale{ display:flex; gap:8px; }
   .scale input{ position:absolute; opacity:0; width:1px; height:1px; }
@@ -323,6 +327,30 @@
           <label for="avaliadoEmail">E-mail do avaliado<span class="req">*</span></label>
           <input type="email" id="avaliadoEmail" required autocomplete="off">
         </div>
+        <div class="field">
+          <label for="matricula">Matrícula do avaliado<span class="req">*</span></label>
+          <input type="text" id="matricula" required autocomplete="off">
+          <div class="hint">Usada como identificador único do colaborador nos relatórios e indicadores.</div>
+        </div>
+        <div class="field">
+          <label for="cargo">Cargo do avaliado<span class="req">*</span></label>
+          <select id="cargo" required>
+            <option value="" disabled selected>Selecione</option>
+            <option>Estagiário</option>
+            <option>Assistente</option>
+            <option>Auxiliar</option>
+            <option>Analista</option>
+            <option>Consultor</option>
+            <option>Especialista</option>
+            <option>Coordenador</option>
+            <option>Supervisor</option>
+            <option>Gerente</option>
+            <option>Gestor</option>
+            <option>Diretor</option>
+            <option>Sócio</option>
+          </select>
+          <div class="hint">Selecionando "Gestor" ou "Gerente", um pilar adicional de Liderança é incluído na avaliação.</div>
+        </div>
       </div>
     </section>
 
@@ -408,45 +436,83 @@ const ICONES = {
   alvo: '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r=".8" fill="currentColor" stroke="none"/>',
   check: '<circle cx="12" cy="12" r="8.5"/><path d="M8 12.3l2.6 2.6L16.5 9"/>',
   pessoas: '<circle cx="8.5" cy="8" r="3"/><circle cx="16" cy="9.5" r="2.3"/><path d="M3 20c0-3.4 2.6-6 5.5-6s5.5 2.6 5.5 6"/><path d="M15 14.3c2.2.2 4 2.3 4 5.7"/>',
-  broto: '<path d="M12 21V11"/><path d="M12 11c0-4 3-6.5 6.5-6.5C18.5 8 15.8 11 12 11z"/><path d="M12 14.5c0-2.7-2.3-4.5-5.5-4.5.2 2.9 2.3 4.7 5.5 4.5z"/>'
+  broto: '<path d="M12 21V11"/><path d="M12 11c0-4 3-6.5 6.5-6.5C18.5 8 15.8 11 12 11z"/><path d="M12 14.5c0-2.7-2.3-4.5-5.5-4.5.2 2.9 2.3 4.7 5.5 4.5z"/>',
+  bussola: '<circle cx="12" cy="12" r="8.5"/><path d="M15.2 8.8l-2 4.4-4.4 2 2-4.4z"/>'
 };
+
+/* Cargos que exigem o pilar adicional de Liderança */
+const CARGOS_LIDERANCA = ['Gestor', 'Gerente'];
+function cargoExigeLideranca(cargo){ return CARGOS_LIDERANCA.indexOf(cargo) !== -1; }
+function pilarAtivo(pilar){
+  return !pilar.condicional || cargoExigeLideranca(document.getElementById('cargo').value);
+}
 
 const PILARES = [
   {
-    id: 'metas', numero: 3, nome: 'Metas e Resultados', accent: 'var(--p1)', rgb: [183,134,44], icone: ICONES.alvo,
+    id: 'metas', nome: 'Metas e Resultados', accent: 'var(--p1)', rgb: [183,134,44], icone: ICONES.alvo,
     contexto: 'Avaliar se o colaborador atingiu as metas estabelecidas, entregou com qualidade e dentro dos prazos. Esse tópico mostra o impacto direto do trabalho no desempenho da equipe e da empresa, permitindo medir produtividade e confiabilidade.',
     premissas: [
-      'Cumprimento dos prazos estabelecidos',
-      'Qualidade das entregas',
-      'Produtividade geral'
+      { nome: 'Cumprimento dos prazos estabelecidos', ajuda: [] },
+      { nome: 'Qualidade das entregas', ajuda: [] },
+      { nome: 'Produtividade geral', ajuda: [] }
     ]
   },
   {
-    id: 'tecnicas', numero: 4, nome: 'Competências Técnicas', accent: 'var(--p2)', rgb: [29,127,192], icone: ICONES.check,
+    id: 'tecnicas', nome: 'Competências Técnicas', accent: 'var(--p2)', rgb: [29,127,192], icone: ICONES.check,
     contexto: 'Verificar o domínio das habilidades e conhecimentos necessários para executar as atividades da função. Garante que o colaborador possui a base técnica para entregar resultados consistentes e acompanhar evoluções da área.',
     premissas: [
-      'Conhecimento técnico',
-      'Capacidade de resolver problemas',
-      'Inovação e melhoria contínua'
+      { nome: 'Conhecimento técnico', ajuda: [] },
+      { nome: 'Capacidade de resolver problemas', ajuda: [] },
+      { nome: 'Inovação e melhoria contínua', ajuda: [] }
     ]
   },
   {
-    id: 'comportamentais', numero: 5, nome: 'Competências Comportamentais', accent: 'var(--p3)', rgb: [109,76,158], icone: ICONES.pessoas,
+    id: 'comportamentais', nome: 'Competências Comportamentais', accent: 'var(--p3)', rgb: [109,76,158], icone: ICONES.pessoas,
     contexto: 'Avaliar atitudes e comportamentos como comunicação, trabalho em equipe, proatividade e relacionamento interpessoal. Esses aspectos influenciam diretamente o clima organizacional, a colaboração entre equipes e a capacidade de gerar soluções em conjunto.',
     premissas: [
-      'Trabalho em equipe',
-      'Comunicação',
-      'Proatividade',
-      'Relacionamento interpessoal'
+      { nome: 'Trabalho em equipe', ajuda: [] },
+      { nome: 'Comunicação', ajuda: [] },
+      { nome: 'Proatividade', ajuda: [] },
+      { nome: 'Relacionamento interpessoal', ajuda: [] }
     ]
   },
   {
-    id: 'desenvolvimento', numero: 6, nome: 'Desenvolvimento e Potencial', accent: 'var(--p4)', rgb: [31,138,99], icone: ICONES.broto,
+    id: 'desenvolvimento', nome: 'Desenvolvimento e Potencial', accent: 'var(--p4)', rgb: [31,138,99], icone: ICONES.broto,
     contexto: 'Identificar a disposição do colaborador para aprender, adaptar-se a mudanças e assumir novos desafios. Esse tópico ajuda a planejar treinamentos, identificar talentos e preparar sucessores para posições estratégicas.',
     premissas: [
-      'Interesse em aprender',
-      'Adaptação a mudanças',
-      'Potencial de crescimento'
+      { nome: 'Interesse em aprender', ajuda: [] },
+      { nome: 'Adaptação a mudanças', ajuda: [] }
+    ]
+  },
+  {
+    id: 'lideranca', nome: 'Liderança', accent: '#B0405C', rgb: [176,64,92], icone: ICONES.bussola, condicional: true,
+    contexto: 'Este pilar avalia a capacidade do colaborador de influenciar positivamente pessoas e resultados, independentemente de ocupar uma posição formal de gestão. Liderança é entendida como a habilidade de inspirar, orientar e mobilizar colegas e equipes em direção aos objetivos organizacionais, promovendo um ambiente de confiança, colaboração e desenvolvimento contínuo.',
+    premissas: [
+      { nome: 'Visão e Direcionamento', ajuda: [
+        'Clareza na comunicação de objetivos e prioridades.',
+        'Capacidade de alinhar esforços individuais e coletivos à estratégia da organização.',
+        'Inspiração para que outros se engajem e se sintam parte do propósito.'
+      ]},
+      { nome: 'Influência e Inspiração', ajuda: [
+        'Habilidade de motivar colegas e equipes, mesmo em cenários desafiadores.',
+        'Postura que gera credibilidade e respeito.',
+        'Capacidade de ser exemplo em atitudes e comportamentos.'
+      ]},
+      { nome: 'Desenvolvimento de Pessoas', ajuda: [
+        'Incentivo ao crescimento profissional dos colegas.',
+        'Apoio na construção de competências e autonomia.',
+        'Feedbacks construtivos e orientados ao desenvolvimento.'
+      ]},
+      { nome: 'Gestão de Relacionamentos', ajuda: [
+        'Construção de relações de confiança e colaboração.',
+        'Respeito à diversidade de opiniões e estilos.',
+        'Capacidade de mediar conflitos e promover soluções equilibradas.'
+      ]},
+      { nome: 'Tomada de Decisão e Responsabilidade', ajuda: [
+        'Capacidade de assumir responsabilidades e decisões com segurança.',
+        'Postura ética e transparente.',
+        'Resiliência diante de erros, transformando-os em aprendizado.'
+      ]}
     ]
   }
 ];
@@ -492,20 +558,25 @@ function slug(texto){
 const container = document.getElementById('pilaresContainer');
 PILARES.forEach(pilar => {
   const section = document.createElement('section');
-  section.className = 'card pilar';
+  section.className = 'card pilar' + (pilar.condicional ? ' pilar-oculto' : '');
+  section.dataset.pilarId = pilar.id;
   section.style.setProperty('--accent', pilar.accent);
 
-  const premissasHtml = pilar.premissas.map(nome => {
-    const campo = `${pilar.id}__${slug(nome)}`;
+  const premissasHtml = pilar.premissas.map(premissa => {
+    const campo = `${pilar.id}__${slug(premissa.nome)}`;
     const opcoes = [1,2,3,4,5].map(v =>
       `<div data-v="${v}"><input type="radio" name="${campo}" id="${campo}-${v}" value="${v}"><label for="${campo}-${v}">${v}</label></div>`
     ).join('');
+    const ajudaHtml = (premissa.ajuda && premissa.ajuda.length)
+      ? `<div class="premissa-ajuda"><ul>${premissa.ajuda.map(p => `<li>${p}</li>`).join('')}</ul></div>`
+      : '';
     return `
       <div class="premissa" data-campo="${campo}">
         <div class="premissa-head">
-          <span class="premissa-nome">${nome}<span class="req">*</span></span>
+          <span class="premissa-nome">${premissa.nome}<span class="req">*</span></span>
           <span class="premissa-nivel" data-nivel-de="${campo}">—</span>
         </div>
+        ${ajudaHtml}
         <div class="scale" data-group="${campo}">${opcoes}</div>
         <div class="scale-err">Selecione uma nota.</div>
       </div>`;
@@ -514,7 +585,7 @@ PILARES.forEach(pilar => {
   section.innerHTML = `
     <div class="thread"></div>
     <div class="seq">
-      <div class="num">${pilar.numero}</div>
+      <div class="num"></div>
       <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${pilar.icone}</svg></div>
       <div class="txt">
         <h2>${pilar.nome}</h2>
@@ -523,11 +594,36 @@ PILARES.forEach(pilar => {
     </div>
     <div class="premissas">${premissasHtml}</div>
     <div class="field qualitativo">
-      <label for="${pilar.id}Texto">Análise qualitativa do quesito "${pilar.nome}"</label>
-      <textarea id="${pilar.id}Texto" placeholder="Comentários sobre este pilar."></textarea>
+      <label for="${pilar.id}Texto">Análise qualitativa do quesito "${pilar.nome}"<span class="req">*</span></label>
+      <textarea id="${pilar.id}Texto" placeholder="Comentários sobre este pilar."${pilar.condicional ? '' : ' required'}></textarea>
     </div>`;
   container.appendChild(section);
 });
+
+/* ---------- Pilar condicional de Liderança: aparece só para Gestor/Gerente ---------- */
+const cargoSelect = document.getElementById('cargo');
+function atualizarPilarLideranca(){
+  const lideranca = PILARES.find(p => p.condicional);
+  if (!lideranca) return;
+  const secao = container.querySelector(`section[data-pilar-id="${lideranca.id}"]`);
+  const textarea = document.getElementById(`${lideranca.id}Texto`);
+  const ativo = cargoExigeLideranca(cargoSelect.value);
+  secao.classList.toggle('pilar-oculto', !ativo);
+  textarea.required = ativo;
+  atualizarNumeracao();
+  atualizarSugestao();
+  atualizarProgresso();
+}
+cargoSelect.addEventListener('change', atualizarPilarLideranca);
+
+/* ---------- Numeração das etapas (1, 2, 3...), recalculada conforme pilares visíveis ---------- */
+function atualizarNumeracao(){
+  const todos = Array.from(form.querySelectorAll('section.card')).filter(el => !el.classList.contains('pilar-oculto'));
+  todos.forEach((secao, i) => {
+    const num = secao.querySelector('.seq .num');
+    if (num) num.textContent = i + 1;
+  });
+}
 
 /* Atualiza o rótulo textual ("Consistente", "Forte desempenho"...) ao lado de cada premissa */
 document.querySelectorAll('.scale input').forEach(input => {
@@ -554,7 +650,7 @@ for (let ano = anoAtual; ano <= anoAtual + 2; ano++) {
 /* ---------- Todas as premissas, para validação / sugestão / coleta ---------- */
 function todosOsCampos(){
   const campos = [];
-  PILARES.forEach(pilar => pilar.premissas.forEach(nome => campos.push(`${pilar.id}__${slug(nome)}`)));
+  PILARES.filter(pilarAtivo).forEach(pilar => pilar.premissas.forEach(premissa => campos.push(`${pilar.id}__${slug(premissa.nome)}`)));
   return campos;
 }
 
@@ -600,13 +696,15 @@ function coletarDados(){
     'Avaliador': document.getElementById('avaliadorNome').value.trim(),
     'E-mail do Avaliador': document.getElementById('avaliadorEmail').value.trim(),
     'Avaliado': document.getElementById('avaliadoNome').value.trim(),
-    'E-mail do Avaliado': document.getElementById('avaliadoEmail').value.trim()
+    'E-mail do Avaliado': document.getElementById('avaliadoEmail').value.trim(),
+    'Matrícula': document.getElementById('matricula').value.trim(),
+    'Cargo': document.getElementById('cargo').value
   };
-  PILARES.forEach(pilar => {
-    pilar.premissas.forEach(nome => {
-      const campo = `${pilar.id}__${slug(nome)}`;
+  PILARES.filter(pilarAtivo).forEach(pilar => {
+    pilar.premissas.forEach(premissa => {
+      const campo = `${pilar.id}__${slug(premissa.nome)}`;
       const el = document.querySelector(`input[name="${campo}"]:checked`);
-      dados[`${pilar.nome} — ${nome}`] = el ? el.value : '';
+      dados[`${pilar.nome} — ${premissa.nome}`] = el ? el.value : '';
     });
     dados[`${pilar.nome} — Análise qualitativa`] = document.getElementById(`${pilar.id}Texto`).value.trim();
   });
@@ -678,25 +776,32 @@ function construirPDF(dados, protocolo){
   y += 22;
 
   /* Dados gerais, num bloco com fundo suave */
-  const alturaBloco = 68;
-  checkPageBreak(alturaBloco);
-  doc.setFillColor(244,245,250);
-  doc.roundedRect(margin, y - 13, larguraUtil, alturaBloco, 5, 5, 'F');
-  let yBloco = y;
   const linhasGerais = [
     ['Avaliado', `${dados['Avaliado']}  (${dados['E-mail do Avaliado']})`],
+    ['Matrícula', dados['Matrícula']],
+    ['Cargo', dados['Cargo']],
     ['Avaliador', `${dados['Avaliador']}  (${dados['E-mail do Avaliador']})`],
     ['Departamento', dados['Departamento']],
     ['Ciclo de avaliação', dados['Ciclo']]
   ];
+  doc.setFont('helvetica','normal'); doc.setFontSize(10);
+  const alturaLinhaGeral = 15.5;
+  const linhasGeraisPreparadas = linhasGerais.map(([label, valor]) => {
+    const txt = doc.splitTextToSize(valor || '—', larguraUtil - 154);
+    return [label, txt];
+  });
+  const alturaBloco = linhasGeraisPreparadas.reduce((soma, [, txt]) => soma + alturaLinhaGeral * txt.length, 0) + 12;
+  checkPageBreak(alturaBloco);
+  doc.setFillColor(244,245,250);
+  doc.roundedRect(margin, y - 13, larguraUtil, alturaBloco, 5, 5, 'F');
+  let yBloco = y;
   doc.setFontSize(10);
-  linhasGerais.forEach(([label, valor]) => {
+  linhasGeraisPreparadas.forEach(([label, txt]) => {
     doc.setFont('helvetica','bold'); doc.setTextColor(39,48,109);
     doc.text(label + ':', margin + 12, yBloco);
     doc.setFont('helvetica','normal'); doc.setTextColor(27,33,66);
-    const txt = doc.splitTextToSize(valor, larguraUtil - 154);
     doc.text(txt, margin + 142, yBloco);
-    yBloco += 15.5 * txt.length;
+    yBloco += alturaLinhaGeral * txt.length;
   });
   y += alturaBloco + 16;
 
@@ -739,10 +844,10 @@ function construirPDF(dados, protocolo){
     }
     y += alturaTexto + gapEntreItens;
   });
-  y += 10;
+  y += 26;
 
-  /* Os 4 pilares, cada um com faixa colorida, contexto e premissas em destaque */
-  PILARES.forEach((pilar, idx) => {
+  /* Os pilares avaliados (4, ou 5 quando o cargo exige o pilar de Liderança), cada um com faixa colorida, contexto e premissas em destaque */
+  PILARES.filter(pilarAtivo).forEach((pilar, idx) => {
     const corPilar = pilar.rgb;
     const corSuave = corClara(corPilar, 0.10);
 
@@ -759,24 +864,48 @@ function construirPDF(dados, protocolo){
     doc.text(linhasContexto, margin + 4, y);
     y += linhasContexto.length * 11.5 + 12;
 
-    pilar.premissas.forEach(nome => {
+    pilar.premissas.forEach(premissa => {
+      const nome = premissa.nome;
+      const ajuda = premissa.ajuda || [];
       const nota = dados[`${pilar.nome} — ${nome}`];
       const larguraColunaNota = 128; // zona de largura fixa para o selo da nota, à direita
       doc.setFont('helvetica','bold'); doc.setFontSize(9.3);
       const linhasNome = doc.splitTextToSize(nome, larguraUtil - larguraColunaNota - 14);
-      const alturaLinhaTexto = 12;
-      const alturaLinha = Math.max(linhasNome.length, 1) * alturaLinhaTexto + 10;
+      const alturaLinhaNome = 12;
+
+      doc.setFont('helvetica','italic'); doc.setFontSize(7.8);
+      const linhasAjuda = ajuda.map(texto => doc.splitTextToSize('• ' + texto, larguraUtil - larguraColunaNota - 20));
+      const alturaLinhaAjuda = 10;
+      const totalLinhasAjuda = linhasAjuda.reduce((soma, l) => soma + l.length, 0);
+
+      const alturaNomeBloco = linhasNome.length * alturaLinhaNome;
+      const alturaAjudaBloco = totalLinhasAjuda ? (totalLinhasAjuda * alturaLinhaAjuda + 4) : 0;
+      const alturaBlocoTexto = alturaNomeBloco + alturaAjudaBloco;
+      const alturaLinha = alturaBlocoTexto + 10;
       checkPageBreak(alturaLinha);
 
-      const centro = y - 12 + alturaLinha / 2; // centro vertical da linha, para alinhar tudo no meio
+      const topo = y - 12;
+      const centro = topo + alturaLinha / 2; // centro vertical da linha, para alinhar tudo no meio
 
       doc.setFillColor(corSuave[0], corSuave[1], corSuave[2]);
-      doc.roundedRect(margin, y - 12, larguraUtil, alturaLinha, 3, 3, 'F');
+      doc.roundedRect(margin, topo, larguraUtil, alturaLinha, 3, 3, 'F');
 
-      // Nome da premissa, centralizado verticalmente na linha
+      // Nome da premissa e, quando houver, as perguntas de apoio — bloco centralizado na linha
+      let cursorY = centro - alturaBlocoTexto / 2 + 3;
       doc.setFont('helvetica','bold'); doc.setFontSize(9.3); doc.setTextColor(40,44,64);
-      const baseNome = centro - ((linhasNome.length - 1) * alturaLinhaTexto) / 2 + 3;
-      linhasNome.forEach((linha, i) => doc.text(linha, margin + 10, baseNome + i * alturaLinhaTexto));
+      linhasNome.forEach((linha, i) => doc.text(linha, margin + 10, cursorY + i * alturaLinhaNome));
+      cursorY += alturaNomeBloco;
+
+      if (linhasAjuda.length){
+        cursorY += 4;
+        doc.setFont('helvetica','italic'); doc.setFontSize(7.8); doc.setTextColor(110,114,133);
+        linhasAjuda.forEach(itemLinhas => {
+          itemLinhas.forEach(linha => {
+            doc.text(linha, margin + 12, cursorY);
+            cursorY += alturaLinhaAjuda;
+          });
+        });
+      }
 
       // Selo da nota: posição fixa dentro da coluna (não desloca conforme o tamanho do rótulo),
       // com o rótulo alinhado à esquerda logo depois do selo, e tudo centralizado verticalmente
@@ -927,6 +1056,7 @@ document.getElementById('btnNova').addEventListener('click', () => {
   window.location.reload();
 });
 
+atualizarNumeracao();
 atualizarProgresso();
 
 /* ---------- Logo em base64 (usada também no cabeçalho do PDF) ---------- */
