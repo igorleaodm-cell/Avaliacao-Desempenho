@@ -147,9 +147,11 @@
     padding: 11px 13px; transition: border-color .15s, box-shadow .15s;
   }
   textarea{ resize: vertical; min-height: 80px; line-height:1.5; }
+  input[readonly]{ background: var(--blue-soft); color: var(--navy); font-weight:600; cursor:default; }
   input:focus, select:focus, textarea:focus{
     outline: none; border-color: var(--blue); box-shadow: 0 0 0 3px rgba(29,127,192,0.15); background: #fff;
   }
+  input[readonly]:focus{ box-shadow:none; border-color: var(--border); }
   select{
     appearance: none; -webkit-appearance:none;
     background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8'><path d='M1 1l5 5 5-5' stroke='%236B7089' stroke-width='1.6' fill='none' fill-rule='evenodd'/></svg>");
@@ -307,49 +309,39 @@
         <div class="num">2</div>
         <div class="txt">
           <h2>Avaliador e avaliado</h2>
-          <p>O documento gerado é enviado para os dois e-mails informados abaixo.</p>
+          <p>O documento gerado é enviado para os dois e-mails informados abaixo. Matrícula e cargo são preenchidos automaticamente ao selecionar o avaliado.</p>
         </div>
       </div>
       <div class="two-col">
         <div class="field">
-          <label for="avaliadorNome">Nome do avaliador<span class="req">*</span></label>
-          <input type="text" id="avaliadorNome" required autocomplete="name">
+          <label for="avaliadorSelect">Nome do avaliador<span class="req">*</span></label>
+          <select id="avaliadorSelect" required>
+            <option value="" disabled selected>Selecione</option>
+          </select>
         </div>
         <div class="field">
           <label for="avaliadorEmail">E-mail do avaliador<span class="req">*</span></label>
           <input type="email" id="avaliadorEmail" required autocomplete="email">
         </div>
         <div class="field">
-          <label for="avaliadoNome">Nome do avaliado<span class="req">*</span></label>
-          <input type="text" id="avaliadoNome" required autocomplete="off">
+          <label for="avaliadoSelect">Nome do avaliado<span class="req">*</span></label>
+          <select id="avaliadoSelect" required>
+            <option value="" disabled selected>Selecione</option>
+          </select>
         </div>
         <div class="field">
           <label for="avaliadoEmail">E-mail do avaliado<span class="req">*</span></label>
           <input type="email" id="avaliadoEmail" required autocomplete="off">
         </div>
         <div class="field">
-          <label for="matricula">Matrícula do avaliado<span class="req">*</span></label>
-          <input type="text" id="matricula" required autocomplete="off">
-          <div class="hint">Usada como identificador único do colaborador nos relatórios e indicadores.</div>
+          <label for="matricula">Matrícula do avaliado</label>
+          <input type="text" id="matricula" readonly>
+          <div class="hint">Preenchida automaticamente ao selecionar o avaliado.</div>
         </div>
         <div class="field">
-          <label for="cargo">Cargo do avaliado<span class="req">*</span></label>
-          <select id="cargo" required>
-            <option value="" disabled selected>Selecione</option>
-            <option>Estagiário</option>
-            <option>Assistente</option>
-            <option>Auxiliar</option>
-            <option>Analista</option>
-            <option>Consultor</option>
-            <option>Especialista</option>
-            <option>Coordenador</option>
-            <option>Supervisor</option>
-            <option>Gerente</option>
-            <option>Gestor</option>
-            <option>Diretor</option>
-            <option>Sócio</option>
-          </select>
-          <div class="hint">Selecionando um cargo de gestão (Supervisor, Coordenador, Gestor, Gerente, Diretor ou Sócio), um pilar adicional de Liderança é incluído na avaliação.</div>
+          <label for="cargo">Cargo do avaliado</label>
+          <input type="text" id="cargo" readonly>
+          <div class="hint">Preenchido automaticamente. Cargos de gestão ativam o pilar de Liderança.</div>
         </div>
       </div>
     </section>
@@ -375,18 +367,7 @@
         <label for="pontosMelhoria">Pontos de melhoria e recomendações<span class="req">*</span></label>
         <textarea id="pontosMelhoria" required></textarea>
       </div>
-      <div class="field">
-        <label for="notaFinal">Nota de avaliação final<span class="req">*</span></label>
-        <select id="notaFinal" required>
-          <option value="" disabled selected>Selecione</option>
-          <option value="1">1 — Não aderente</option>
-          <option value="2">2 — Em desenvolvimento</option>
-          <option value="3">3 — Consistente</option>
-          <option value="4">4 — Forte desempenho</option>
-          <option value="5">5 — Excepcional</option>
-        </select>
-        <div class="hint">Sugestão com base na média das premissas avaliadas acima: <strong id="notaSugerida">—</strong></div>
-      </div>
+      <div class="hint" style="margin-top:2px;">A nota de avaliação final é calculada automaticamente a partir das notas atribuídas em cada pilar e aparece apenas no documento gerado — para não influenciar a avaliação enquanto ela é preenchida.</div>
     </section>
 
     <div class="actions">
@@ -440,9 +421,66 @@ const ICONES = {
   bussola: '<circle cx="12" cy="12" r="8.5"/><path d="M15.2 8.8l-2 4.4-4.4 2 2-4.4z"/>'
 };
 
-/* Cargos que exigem o pilar adicional de Liderança */
-const CARGOS_LIDERANCA = ['Supervisor', 'Coordenador', 'Gestor', 'Gerente', 'Diretor', 'Sócio'];
-function cargoExigeLideranca(cargo){ return CARGOS_LIDERANCA.indexOf(cargo) !== -1; }
+/* =========================================================================
+   QUADRO DE FUNCIONÁRIOS — nome, matrícula e cargo de cada colaborador.
+   Alimenta os menus de Avaliador e Avaliado; ao selecionar o avaliado, a
+   matrícula e o cargo são preenchidos automaticamente. Atualize esta lista
+   a cada novo ciclo (substitua pelo conteúdo mais recente da planilha de
+   funcionários — mesmas colunas: matrícula, nome, cargo e departamento).
+   ========================================================================= */
+const FUNCIONARIOS = [
+  { matricula: '232', nome: 'BRENDA PATIELY GOMES DA SILVA', cargo: 'ANALISTA CONTABIL PLENO', departamento: 'CONTABILIDADE' },
+  { matricula: '223', nome: 'BRUNA LOPES PEREIRA', cargo: 'ANALISTA DEPARTAMENTO FISCAL', departamento: 'FISCAL' },
+  { matricula: '162', nome: 'CHARLANNE D AVILA CARDOSO', cargo: 'GERENTE GERAL', departamento: 'EXECUTIVO' },
+  { matricula: '159', nome: 'CINTHIA MARIA PEIXOTO', cargo: 'GESTOR DE PROCESSOS', departamento: 'LEGALIZAÇÃO' },
+  { matricula: '9', nome: 'DARLIANE SILVA PEIXOTO', cargo: 'GESTOR(A) ADMINISTRATIVO', departamento: 'ADMINISTRATIVO' },
+  { matricula: '153', nome: 'FRANCISCA GECIANA GOMES', cargo: 'GESTOR (A) CONTABIL', departamento: 'CONTABILIDADE' },
+  { matricula: '231', nome: 'GABRIELLA VITORINA RODRIGUES DA SILVA', cargo: 'AUXILIAR CONTABIL', departamento: 'CONTABILIDADE' },
+  { matricula: '229', nome: 'GABRIELLY FERNANDES SALVIO', cargo: 'ANALISTA DEPARTAMENTO PESSOAL PLENO', departamento: 'DP' },
+  { matricula: '192', nome: 'GLEICILENE APARECIDA MATHIAS ROCHA', cargo: 'ANALISTA DEPARTAMENTO PESSOAL PLENO', departamento: 'DP' },
+  { matricula: '211', nome: 'JESSICA FERNANDES RODRIGUES CORREIA', cargo: 'AUXILIAR ADMINISTRATIVO', departamento: 'ADMINISTRATIVO' },
+  { matricula: '228', nome: 'JULIANA RODRIGUES DA SILVA', cargo: 'GESTOR DEP.FISCAL', departamento: 'FISCAL' },
+  { matricula: '212', nome: 'LEONARDO DOS ANJOS DA SILVA', cargo: 'ANALISTA DEPARTAMENTO FISCAL JUNIOR', departamento: 'FISCAL' },
+  { matricula: '155', nome: 'MONICA SILENE DE JESUS OLIVEIRA RIBEIRO', cargo: 'ANALISTA DEPARTAMENTO FISCAL', departamento: 'FISCAL' },
+  { matricula: '230', nome: 'PAMELA KEITTI CABRAL COSTA', cargo: 'ESTAGIARIO', departamento: 'FISCAL' },
+  { matricula: '226', nome: 'PATRICK ERNANI LOPES DE SOUZA', cargo: 'ANALISTA CONTABIL PLENO', departamento: 'CONTABILIDADE' },
+  { matricula: '204', nome: 'SARA BACELAR ELIAN', cargo: 'ANALISTA DEPARTAMENTO FISCAL', departamento: 'FISCAL' },
+  { matricula: '224', nome: 'VICTORIA EMANUELLE DE SOUZA VIANA', cargo: 'ANALISTA CONTÁBIL JUNIOR', departamento: 'CONTABILIDADE' },
+  { matricula: '135', nome: 'WAGNER FERREIRA SILVA', cargo: 'GESTOR DEP.PESSOAL', departamento: 'DP' },
+  { matricula: '1073', nome: 'CARLOS EDUARDO ARAUJO CHEREM', cargo: 'ESTAGIARIO', departamento: 'BPO' },
+  { matricula: '1071', nome: 'DEBORA ELIZABETE DE ALMEIDA', cargo: 'ASSISTENTE FINANCERO', departamento: 'BPO' },
+  { matricula: '1072', nome: 'LUCAS WILLIAN VIANA SILVA', cargo: 'GESTOR DE BPO FINANCEIRO', departamento: 'BPO' },
+  { matricula: '1069', nome: 'RICARDO AUGUSTO NOGUEIRA DIANA', cargo: 'GESTOR DE BPO FINANCEIRO', departamento: 'BPO' }
+];
+
+/* Deixa "João da Silva" em vez de "JOÃO DA SILVA", preservando siglas como BPO e DP */
+const SIGLAS_CARGO = ['BPO', 'DP', 'TI'];
+const CONECTORES_NOME = ['da', 'de', 'do', 'das', 'dos', 'e'];
+function capitalizar(texto){
+  return texto.toLowerCase().split(' ').map((palavra, i) => {
+    if (SIGLAS_CARGO.includes(palavra.toUpperCase())) return palavra.toUpperCase();
+    if (CONECTORES_NOME.includes(palavra) && i !== 0) return palavra;
+    return palavra.charAt(0).toUpperCase() + palavra.slice(1);
+  }).join(' ');
+}
+FUNCIONARIOS.forEach(f => {
+  f.nomeExibicao = capitalizar(f.nome);
+  f.cargoExibicao = capitalizar(f.cargo);
+});
+function buscarFuncionario(matricula){
+  return FUNCIONARIOS.find(f => f.matricula === matricula);
+}
+
+/* Cargos que exigem o pilar adicional de Liderança — por palavra-chave, para
+   acompanhar a nomenclatura real dos cargos na planilha (ex.: "GESTOR(A)
+   ADMINISTRATIVO", "GESTOR DE BPO FINANCEIRO", "GERENTE GERAL") em vez de
+   depender de uma lista fixa de cargos exatos. */
+const PALAVRAS_CARGO_LIDERANCA = ['GESTOR', 'GERENTE', 'COORDENADOR', 'SUPERVISOR', 'DIRETOR', 'SOCIO', 'SÓCIO'];
+function cargoExigeLideranca(cargo){
+  if (!cargo) return false;
+  const cargoNormalizado = cargo.toUpperCase();
+  return PALAVRAS_CARGO_LIDERANCA.some(palavra => cargoNormalizado.includes(palavra));
+}
 function pilarAtivo(pilar){
   return !pilar.condicional || cargoExigeLideranca(document.getElementById('cargo').value);
 }
@@ -590,21 +628,44 @@ PILARES.forEach(pilar => {
   container.appendChild(section);
 });
 
-/* ---------- Pilar condicional de Liderança: aparece só para Gestor/Gerente ---------- */
-const cargoSelect = document.getElementById('cargo');
+/* ---------- Menus de Avaliador e Avaliado, a partir do quadro de funcionários ---------- */
+const avaliadorSelect = document.getElementById('avaliadorSelect');
+const avaliadoSelect = document.getElementById('avaliadoSelect');
+const matriculaInput = document.getElementById('matricula');
+const cargoInput = document.getElementById('cargo');
+
+function popularSelectFuncionarios(select){
+  const ordenados = [...FUNCIONARIOS].sort((a, b) => a.nomeExibicao.localeCompare(b.nomeExibicao, 'pt-BR'));
+  ordenados.forEach(f => {
+    const opt = document.createElement('option');
+    opt.value = f.matricula;
+    opt.textContent = `${f.nomeExibicao} — ${f.cargoExibicao}`;
+    select.appendChild(opt);
+  });
+}
+popularSelectFuncionarios(avaliadorSelect);
+popularSelectFuncionarios(avaliadoSelect);
+
+/* ---------- Pilar condicional de Liderança: aparece conforme o cargo do avaliado ---------- */
 function atualizarPilarLideranca(){
   const lideranca = PILARES.find(p => p.condicional);
   if (!lideranca) return;
   const secao = container.querySelector(`section[data-pilar-id="${lideranca.id}"]`);
   const textarea = document.getElementById(`${lideranca.id}Texto`);
-  const ativo = cargoExigeLideranca(cargoSelect.value);
+  const ativo = cargoExigeLideranca(cargoInput.value);
   secao.classList.toggle('pilar-oculto', !ativo);
   textarea.required = ativo;
   atualizarNumeracao();
-  atualizarSugestao();
   atualizarProgresso();
 }
-cargoSelect.addEventListener('change', atualizarPilarLideranca);
+
+avaliadoSelect.addEventListener('change', () => {
+  const f = buscarFuncionario(avaliadoSelect.value);
+  matriculaInput.value = f ? f.matricula : '';
+  cargoInput.value = f ? f.cargoExibicao : '';
+  atualizarPilarLideranca();
+  atualizarProgresso();
+});
 
 /* ---------- Numeração das etapas (1, 2, 3...), recalculada conforme pilares visíveis ---------- */
 function atualizarNumeracao(){
@@ -620,7 +681,6 @@ document.querySelectorAll('.scale input').forEach(input => {
   input.addEventListener('change', () => {
     const alvo = document.querySelector(`[data-nivel-de="${input.name}"]`);
     if (alvo) alvo.textContent = ROTULOS[input.value];
-    atualizarSugestao();
     atualizarProgresso();
   });
 });
@@ -644,20 +704,36 @@ function todosOsCampos(){
   return campos;
 }
 
-/* ---------- Nota final sugerida (média de todas as premissas) ---------- */
-const notaSugerida = document.getElementById('notaSugerida');
-function atualizarSugestao(){
-  const campos = todosOsCampos();
-  const valores = campos.map(c => {
-    const el = document.querySelector(`input[name="${c}"]:checked`);
-    return el ? Number(el.value) : null;
+/* =========================================================================
+   NOTA FINAL — calculada automaticamente por média ponderada dos pilares,
+   nunca exibida durante o preenchimento (só aparece no PDF gerado ao final,
+   para não induzir o avaliador enquanto atribui as notas).
+
+   Sugestão de pesos: ajuste livremente estes dois mapas conforme a
+   necessidade do escritório. Quando o pilar de Liderança está ativo, ele
+   recebe o maior peso entre os pilares, como pedido.
+   ========================================================================= */
+const PESOS_SEM_LIDERANCA = { metas: 0.30, tecnicas: 0.25, comportamentais: 0.25, desenvolvimento: 0.20 };
+const PESOS_COM_LIDERANCA = { metas: 0.20, tecnicas: 0.15, comportamentais: 0.20, desenvolvimento: 0.15, lideranca: 0.30 };
+
+function calcularNotaFinal(dados){
+  const pilaresAtivos = PILARES.filter(pilarAtivo);
+  const pesos = pilaresAtivos.some(p => p.condicional) ? PESOS_COM_LIDERANCA : PESOS_SEM_LIDERANCA;
+
+  let somaPonderada = 0;
+  let somaPesos = 0;
+  pilaresAtivos.forEach(pilar => {
+    const notas = pilar.premissas
+      .map(p => Number(dados[`${pilar.nome} — ${p.nome}`]))
+      .filter(n => !isNaN(n) && n > 0);
+    if (!notas.length) return;
+    const media = notas.reduce((a, b) => a + b, 0) / notas.length;
+    const peso = pesos[pilar.id] || 0;
+    somaPonderada += media * peso;
+    somaPesos += peso;
   });
-  if (valores.every(v => v !== null)) {
-    const media = valores.reduce((a,b)=>a+b,0) / valores.length;
-    notaSugerida.textContent = media.toFixed(1).replace('.0','') + ' / 5';
-  } else {
-    notaSugerida.textContent = '—';
-  }
+
+  return somaPesos ? somaPonderada / somaPesos : 0;
 }
 
 /* ---------- Validação das escalas ---------- */
@@ -680,15 +756,17 @@ function gerarProtocolo(){
 
 /* ---------- Coleta de dados: chaves legíveis, prontas para PDF / e-mail / planilha ---------- */
 function coletarDados(){
+  const funcionarioAvaliador = buscarFuncionario(avaliadorSelect.value);
+  const funcionarioAvaliado = buscarFuncionario(avaliadoSelect.value);
   const dados = {
     'Departamento': document.getElementById('departamento').value,
     'Ciclo': document.getElementById('ciclo').value,
-    'Avaliador': document.getElementById('avaliadorNome').value.trim(),
+    'Avaliador': funcionarioAvaliador ? funcionarioAvaliador.nomeExibicao : '',
     'E-mail do Avaliador': document.getElementById('avaliadorEmail').value.trim(),
-    'Avaliado': document.getElementById('avaliadoNome').value.trim(),
+    'Avaliado': funcionarioAvaliado ? funcionarioAvaliado.nomeExibicao : '',
     'E-mail do Avaliado': document.getElementById('avaliadoEmail').value.trim(),
-    'Matrícula': document.getElementById('matricula').value.trim(),
-    'Cargo': document.getElementById('cargo').value
+    'Matrícula': matriculaInput.value,
+    'Cargo': cargoInput.value
   };
   PILARES.filter(pilarAtivo).forEach(pilar => {
     pilar.premissas.forEach(premissa => {
@@ -700,7 +778,6 @@ function coletarDados(){
   });
   dados['Pontos fortes'] = document.getElementById('pontosFortes').value.trim();
   dados['Pontos de melhoria'] = document.getElementById('pontosMelhoria').value.trim();
-  dados['Nota final'] = document.getElementById('notaFinal').value;
   return dados;
 }
 
@@ -953,8 +1030,9 @@ function construirPDF(dados, protocolo){
   paragrafo(dados['Pontos de melhoria'], { tamanho: 9.3 });
   y += 16;
 
-  /* Nota final, em faixa colorida de destaque */
-  const notaFinalCor = CORES_NOTA[dados['Nota final']] || [39,48,109];
+  /* Nota final, em faixa colorida de destaque — calculada por média ponderada dos pilares */
+  const notaFinalArredondada = Math.round(Number(dados['Nota final']));
+  const notaFinalCor = CORES_NOTA[notaFinalArredondada] || [39,48,109];
   const alturaFaixa = 30;
   checkPageBreak(alturaFaixa + 6);
   doc.setFillColor(notaFinalCor[0], notaFinalCor[1], notaFinalCor[2]);
@@ -962,7 +1040,7 @@ function construirPDF(dados, protocolo){
   doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(255,255,255);
   doc.text('Nota de avaliação final', margin + 14, y - 1);
   doc.setFontSize(13);
-  doc.text(`${dados['Nota final']} — ${ROTULOS[dados['Nota final']]}`, pageWidth - margin - 14, y - 1, { align: 'right' });
+  doc.text(`${dados['Nota final']} / 5 — ${ROTULOS[notaFinalArredondada]}`, pageWidth - margin - 14, y - 1, { align: 'right' });
   y += alturaFaixa + 12;
 
   checkPageBreak(12);
@@ -1010,6 +1088,7 @@ form.addEventListener('submit', async (e) => {
   submitBtn.textContent = 'Gerando documento…';
 
   const dados = coletarDados();
+  dados['Nota final'] = calcularNotaFinal(dados).toFixed(1);
   const protocolo = gerarProtocolo();
   const { doc, nomeArquivo } = construirPDF(dados, protocolo);
   ultimoPDF = { doc, nomeArquivo };
