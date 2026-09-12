@@ -200,7 +200,7 @@
   button.submit:disabled{ background: #9AA0BE; box-shadow:none; cursor:default; }
   .actions .foot-note{ text-align:center; font-size:12.5px; color: var(--muted); margin-top:12px; }
 
-  .demo-flag{
+  .-flag{
     background:#FFF6E9; border:1px solid #F0D9AE; color:#8A5A16;
     font-size:12.5px; border-radius:8px; padding:10px 13px; margin-bottom:20px;
   }
@@ -397,12 +397,12 @@
    CONFIGURAÇÃO — preencha antes de publicar
    ========================================================================= */
 const CONFIG = {
-  MODO_DEMO: true,
+  MODO_DEMO: false,
   // URL do Web App do Google Apps Script (veja Code.gs / INSTRUCOES.md).
   // Um único endpoint recebe o PDF gerado no navegador e cuida de tudo do
   // lado do escritório: guarda o PDF no Drive, registra a linha na planilha
   // "Respostas" e envia o e-mail com o PDF anexado ao avaliador e ao avaliado.
-  APPS_SCRIPT_URL: "SUA_URL_DO_APPS_SCRIPT"
+  APPS_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbwhucztI8gJSfroIVribZVsRaXR4TBQtAFYQJTbDj04izkwNoQbYaly3qmLT5xBij__Pg/exec"
 };
 
 document.getElementById('demoFlag').style.display = CONFIG.MODO_DEMO ? 'block' : 'none';
